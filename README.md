@@ -1,5 +1,15 @@
 # 📸 Restaurador de Fotos — v2.1
 
+# 📷 Restaurador de Fotos
+
+Herramienta web para restaurar y mejorar fotografías antiguas directamente desde el navegador.
+
+<p align="center">
+  <a href="https://alfredosan-eng.github.io/restaurador_fotos/">
+    <img src="https://img.shields.io/badge/🚀%20Abrir%20Restaurador%20de%20Fotos-4285F4?style=for-the-badge" alt="Abrir Restaurador de Fotos">
+  </a>
+</p>
+
 Herramienta web **client-side** para corregir y mejorar fotografías antiguas sin enviar las imágenes a un servidor de procesamiento.
 
 La v2.1 cierra la primera gran etapa del proyecto combinando rendimiento para imágenes grandes con restauración heurística local.
@@ -209,4 +219,24 @@ GitHub: https://github.com/alfredosan-eng
 
 ## 📄 Licencia
 
-No se ha declarado una licencia todavía.
+MIT License
+
+Copyright (c) 2026 Alfredo San
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
