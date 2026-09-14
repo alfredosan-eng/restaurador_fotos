@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurador de Fotos · v2.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --google-blue: #1a73e8;
+            --google-red: #ea4335;
+            --google-yellow: #fbbc04;
+            --google-green: #34a853;
+            --text: #202124;
+            --muted: #5f6368;
+            --line: #dadce0;
+            --surface: #ffffff;
+            --surface-soft: #f8f9fa;
+        }
+        body {
+            background-color: #ffffff;
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .google-header {
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+        }
+        .brand-icon {
+            background: #f1f3f4;
+            color: var(--google-blue);
+            border: 1px solid var(--line);
+        }
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            margin-top: .2rem;
+            font-size: .72rem;
+            color: #5f6368;
+            text-decoration: none;
+            transition: color .2s ease;
+        }
+        .github-link:hover { color: #1a73e8; }
+        .google-btn {
+            border-radius: 8px;
+            transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+        }
+        .google-btn:hover {
+            filter: brightness(.96);
+            box-shadow: 0 2px 7px rgba(60,64,67,.20);
+            transform: translateY(-1px);
+        }
+        .btn-blue { background: var(--google-blue); color: #fff; }
+        .btn-green { background: var(--google-green); color: #fff; }
+        .btn-red { background: var(--google-red); color: #fff; }
+        .btn-yellow { background: var(--google-yellow); color: #202124; }
+        .panel { background: #fff; border: 1px solid var(--line); }
+        .soft-panel { background: var(--surface-soft); border: 1px solid var(--line); }
+        .canvas-container {
+            position: relative;
+            max-width: 100%;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 10px rgba(60,64,67,.18);
+            background: #f8f9fa;
+            border: 1px solid var(--line);
+        }
+        .split-slider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--google-blue);
+            cursor: ew-resize;
+            z-index: 30;
+            box-shadow: 0 0 8px rgba(26,115,232,.45);
+            touch-action: none;
+        }
+        .split-handle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 36px;
+            height: 36px;
+            background: #fff;
+            border: 2px solid var(--google-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--google-blue);
+            box-shadow: 0 2px 8px rgba(60,64,67,.25);
+        }
+        input[type=range] { accent-color: var(--google-blue); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="google-header px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 brand-icon rounded-lg">
+                <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">Restaurador de Fotos</h1>
+                <p class="text-xs text-slate-500">Restauración, limpieza y corrección de fotografías antiguas</p>
+                <a href="https://github.com/alfredosan-eng" target="_blank" rel="noopener noreferrer" class="github-link" aria-label="Abrir GitHub de alfredosan-eng">
+                    <i class="fa-brands fa-github"></i> github.com/alfredosan-eng
+                </a>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3">
+            <label for="imageUpload" class="cursor-pointer google-btn btn-blue px-4 py-2 text-sm font-medium transition flex items-center gap-2">
+                <i class="fa-solid fa-upload"></i> Cargar Foto
+            </label>
+            <input type="file" id="imageUpload" accept="image/*" class="hidden">
+            <button id="downloadBtn" class="google-btn btn-red font-semibold px-4 py-2 text-sm transition flex items-center gap-2" type="button">
+                <i class="fa-solid fa-download"></i> Descargar JPG
+            </button>
+            <button id="downloadPngBtn" class="google-btn btn-green font-semibold px-4 py-2 text-sm transition flex items-center gap-2" type="button">
+                <i class="fa-solid fa-file-image"></i> Descargar PNG
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-[1600px] w-full mx-auto">
+        
+        <!-- Controls Panel (Left) -->
+        <div class="lg:col-span-4 panel rounded-xl p-5 flex flex-col justify-between space-y-6">
+            <div class="space-y-5 overflow-y-auto max-h-[calc(100vh-180px)] pr-2">
+                
+                <!-- Quick Presets -->
+                <div>
+                    <h3 class="text-xs font-semibold text-[#1a73e8] uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> Ajustes Automáticos Rápidos
+                    </h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="applyPreset('correccionBasica')" class="soft-panel hover:shadow-sm text-[#202124] text-xs p-3 rounded-lg text-left flex flex-col justify-between transition group">
+                            <span class="font-medium group-hover:text-[#1a73e8]">✨ Corrección Básica</span>
+                            <span class="text-[10px] text-[#5f6368]">Ajusta color, luz, contraste y nitidez</span>
+                        </button>
+                        <button onclick="applyPreset('limpiarAmarillo')" class="soft-panel hover:shadow-sm text-[#202124] text-xs p-3 rounded-lg text-left flex flex-col justify-between transition group">
+                            <span class="font-medium group-hover:text-[#1a73e8]">🧹 Quitar Amarilleo</span>
+                            <span class="text-[10px] text-slate-500">Filtro neutro balance blanco</span>
+                        </button>
+                        <button onclick="applyPreset('rostroNatural')" class="soft-panel hover:shadow-sm text-[#202124] text-xs p-3 rounded-lg text-left flex flex-col justify-between transition group">
+                            <span class="font-medium group-hover:text-[#1a73e8]">👶 Tono de Piel Pura</span>
+                            <span class="text-[10px] text-slate-500">Conserva tono suave facial</span>
+                        </button>
+                        <button onclick="resetSliders()" class="soft-panel hover:shadow-sm text-[#ea4335] text-xs p-3 rounded-lg text-left flex flex-col justify-between transition">
+                            <span class="font-medium">🔄 Reiniciar Todo</span>
+                            <span class="text-[10px] text-slate-500">Restaurar valores iniciales</span>
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="border-[#dadce0]">
+
+                <!-- Manual Adjustments -->
+                <div class="space-y-4">
+                    <h3 class="text-xs font-semibold text-[#5f6368] uppercase tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-sliders"></i> Corrección Manual de Color
+                    </h3>
+
+                    <!-- De-yellowing -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Eliminación de Tono Amarillo</span>
+                            <span id="valYellow" class="text-[#1a73e8]">0%</span>
+                        </div>
+                        <input type="range" id="yellowFix" min="0" max="100" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Temperature -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Balance de Tinta (Frío / Cálido)</span>
+                            <span id="valTemp" class="text-[#1a73e8]">0</span>
+                        </div>
+                        <input type="range" id="temperature" min="-50" max="50" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Tint (Green/Magenta) -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Matiz (Verde / Magenta)</span>
+                            <span id="valTint" class="text-[#1a73e8]">0</span>
+                        </div>
+                        <input type="range" id="tint" min="-50" max="50" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Brightness -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Brillo General</span>
+                            <span id="valBrightness" class="text-[#1a73e8]">0</span>
+                        </div>
+                        <input type="range" id="brightness" min="-50" max="50" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Contrast -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Contraste</span>
+                            <span id="valContrast" class="text-[#1a73e8]">0</span>
+                        </div>
+                        <input type="range" id="contrast" min="-50" max="50" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Red Saturation -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Intensidad del Rojo (Traje)</span>
+                            <span id="valRed" class="text-[#1a73e8]">0%</span>
+                        </div>
+                        <input type="range" id="redBoost" min="0" max="100" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Global Saturation -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Saturación General</span>
+                            <span id="valSaturation" class="text-[#1a73e8]">0</span>
+                        </div>
+                        <input type="range" id="saturation" min="-50" max="50" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Sharpness -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Nitidez / Enfoque Suave</span>
+                            <span id="valSharpness" class="text-[#1a73e8]">0%</span>
+                        </div>
+                        <input type="range" id="sharpness" min="0" max="100" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Advanced Restoration v2.0 -->
+            <div class="bg-white/70 border border-[#dadce0] rounded-xl p-4 space-y-4">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-[#202124]">Restauración avanzada</h3>
+                        <p class="text-[11px] text-slate-500">Filtros heurísticos locales · sin IA ni servidor</p>
+                    </div>
+                    <span id="advancedStatus" class="text-[10px] uppercase tracking-wide text-[#34a853]">v2.1</span>
+                </div>
+                <div class="space-y-3">
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Reducción de ruido</span>
+                            <span id="valNoise" class="text-[#1a73e8]">0%</span>
+                        </div>
+                        <input type="range" id="noiseReduction" min="0" max="100" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer" aria-label="Reducción de ruido">
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Reparación de rayones</span>
+                            <span id="valScratch" class="text-[#1a73e8]">0%</span>
+                        </div>
+                        <input type="range" id="scratchRepair" min="0" max="100" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer" aria-label="Reparación de rayones">
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-[#3c4043]">Restauración de color</span>
+                            <span id="valColorRestore" class="text-[#1a73e8]">0%</span>
+                        </div>
+                        <input type="range" id="colorRestore" min="0" max="100" value="0" class="w-full h-1.5 bg-[#f1f3f4] rounded-lg appearance-none cursor-pointer" aria-label="Restauración avanzada de color">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-[#e8f0fe] border border-[#d2e3fc] text-[#3c4043] rounded-lg p-3 text-xs leading-relaxed flex gap-2">
+                <i class="fa-solid fa-gauge-high text-[#1a73e8] text-base shrink-0 mt-0.5"></i>
+                <span><strong>Modo rendimiento:</strong> la edición usa una preview reducida. JPG y PNG procesan la resolución completa al exportar.</span>
+            </div>
+
+            <!-- Notice -->
+            <div class="bg-[#fef7e0] border border-[#f9e2a7] text-[#3c4043] rounded-lg p-3 text-xs leading-relaxed flex gap-2">
+                <i class="fa-solid fa-shield-halved text-[#f9ab00] text-base shrink-0 mt-0.5"></i>
+                <span><strong>Protección Facial Garantizada:</strong> Esta herramienta trabaja a nivel de balance de tonos cromáticos directos en los píxeles, sin distorsionar la geometría del rostro ni recrear rasgos mediante IA.</span>
+            </div>
+        </div>
+
+        <!-- Canvas Viewport (Right) -->
+        <div class="lg:col-span-8 flex flex-col items-center justify-center soft-panel rounded-xl p-4 min-h-[500px] relative">
+            
+            <!-- Instructions when empty -->
+            <div id="uploadPrompt" class="text-center p-8 border-2 border-dashed border-[#dadce0] rounded-xl max-w-md my-auto">
+                <i class="fa-solid fa-cloud-arrow-up text-4xl text-[#1a73e8] mb-3"></i>
+                <h2 class="font-semibold text-[#202124] text-base mb-1">Carga tu foto original</h2>
+                <p class="text-xs text-[#5f6368] mb-4">Selecciona o arrastra el archivo de tu fotografía para comenzar la limpieza de color.</p>
+                <label for="imageUploadPrompt" class="cursor-pointer google-btn btn-blue inline-flex items-center gap-2 font-medium px-4 py-2 text-xs transition">
+                    <i class="fa-solid fa-folder-open"></i> Seleccionar Imagen
+                </label>
+                <input type="file" id="imageUploadPrompt" accept="image/*" class="hidden">
+            </div>
+
+            <!-- Workspace View -->
+            <div id="workspace" class="hidden w-full h-full flex flex-col items-center justify-center relative select-none">
+                <div id="processingIndicator" class="hidden absolute inset-0 z-50 items-center justify-center bg-[#f8f9fa]/70 backdrop-blur-sm rounded-xl" role="status" aria-live="polite">
+                    <div class="flex items-center gap-3 bg-white border border-[#dadce0] rounded-lg px-4 py-3 shadow-xl">
+                        <i class="fa-solid fa-spinner fa-spin text-[#1a73e8]"></i>
+                        <span id="processingText" class="text-sm text-[#202124]">Procesando imagen…</span>
+                    </div>
+                </div>
+                
+                <!-- Helper text for comparison -->
+                <div class="absolute top-2 left-2 z-40 bg-white backdrop-blur px-3 py-1 rounded text-[11px] text-[#3c4043] border border-[#dadce0]">
+                    Arrastra la barra central para comparar <strong class="text-[#1a73e8]">Antes vs Después</strong>
+                </div>
+
+                <div id="canvasWrapper" class="canvas-container relative max-h-[75vh] flex justify-center items-center">
+                    <!-- Original Image Canvas (Bottom layer) -->
+                    <canvas id="canvasBefore" class="block max-h-[75vh] w-auto object-contain"></canvas>
+                    
+                    <!-- Modified Image Canvas (Top layer, clipped) -->
+                    <canvas id="canvasAfter" class="absolute top-0 left-0 max-h-[75vh] w-auto object-contain z-10"></canvas>
+
+                    <!-- Split Slider Divider -->
+                    <div id="sliderDivider" class="split-slider" role="slider" aria-label="Comparador Antes y Después" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0">
+                        <div class="split-handle">
+                            <i class="fa-solid fa-arrows-left-right text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="border-t border-[#dadce0] bg-white px-6 py-4 text-center text-xs text-[#5f6368]">
+        Restaurador de Fotos · <a href="https://github.com/alfredosan-eng" target="_blank" rel="noopener noreferrer" class="text-[#1a73e8] hover:underline font-medium">GitHub · alfredosan-eng</a>
+    </footer>
+
+    <!-- Restaurador de Fotos · v2.1 -->
+    <script>
+        // State variables
+        let originalImg = null;
+        const canvasBefore = document.getElementById('canvasBefore');
+        const ctxBefore = canvasBefore.getContext('2d');
+        const canvasAfter = document.getElementById('canvasAfter');
+        const ctxAfter = canvasAfter.getContext('2d');
+        const wrapper = document.getElementById('canvasWrapper');
+        const divider = document.getElementById('sliderDivider');
+        const processingIndicator = document.getElementById('processingIndicator');
+        
+        let sliderPos = 0.5; // 50% split view
+        let isDragging = false;
+        let processingTimer = null;
+        let originalWidth = 0;
+        let originalHeight = 0;
+        let previewWidth = 0;
+        let previewHeight = 0;
+        const PREVIEW_MAX_DIMENSION = 1600;
+        let workerRequests = new Map();
+        let exportInProgress = false;
+
+        // Controls elements
+        const inputs = ['yellowFix', 'temperature', 'tint', 'brightness', 'contrast', 'redBoost', 'saturation', 'sharpness', 'noiseReduction', 'scratchRepair', 'colorRestore'];
+        
+        // Setup Event Listeners
+        document.getElementById('imageUpload').addEventListener('change', handleImageUpload);
+        document.getElementById('imageUploadPrompt').addEventListener('change', handleImageUpload);
+        document.getElementById('downloadBtn').addEventListener('click', downloadJpeg);
+        document.getElementById('downloadPngBtn').addEventListener('click', downloadPng);
+
+        inputs.forEach(id => {
+            const input = document.getElementById(id);
+            input.addEventListener('input', () => {
+                updateLabels();
+                schedulePreviewProcessing();
+            });
+        });
+
+        // Split view drag logic — Pointer Events for mouse, touch and stylus
+        divider.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            divider.setPointerCapture?.(e.pointerId);
+            updateSliderFromPointer(e);
+            e.preventDefault();
+        });
+
+        divider.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            updateSliderFromPointer(e);
+            e.preventDefault();
+        });
+
+        divider.addEventListener('pointerup', stopDragging);
+        divider.addEventListener('pointercancel', stopDragging);
+        divider.addEventListener('lostpointercapture', stopDragging);
+
+        divider.addEventListener('keydown', (e) => {
+            const step = 0.02;
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                sliderPos = Math.max(0, sliderPos - step);
+                updateSplitView();
+                e.preventDefault();
+            } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                sliderPos = Math.min(1, sliderPos + step);
+                updateSplitView();
+                e.preventDefault();
+            } else if (e.key === 'Home') {
+                sliderPos = 0;
+                updateSplitView();
+                e.preventDefault();
+            } else if (e.key === 'End') {
+                sliderPos = 1;
+                updateSplitView();
+                e.preventDefault();
+            }
+        });
+
+        function updateSliderFromPointer(e) {
+            const rect = canvasBefore.getBoundingClientRect();
+            if (rect.width === 0) return;
+            let x = e.clientX - rect.left;
+            x = Math.max(0, Math.min(x, rect.width));
+            sliderPos = x / rect.width;
+            updateSplitView();
+        }
+
+        function stopDragging(e) {
+            isDragging = false;
+            if (e?.pointerId != null) {
+                try { divider.releasePointerCapture?.(e.pointerId); } catch (_) {}
+            }
+        }
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                originalImg = new Image();
+                originalImg.onload = function() {
+                    document.getElementById('uploadPrompt').classList.add('hidden');
+                    document.getElementById('workspace').classList.remove('hidden');
+                    // Keep the original resolution for export and use a bounded preview for editing.
+                    originalWidth = originalImg.width;
+                    originalHeight = originalImg.height;
+                    preparePreview();
+
+                    // Apply preset by default on initial upload.
+                    applyPreset('correccionBasica');
+                };
+                originalImg.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateLabels() {
+            document.getElementById('valYellow').innerText = document.getElementById('yellowFix').value + '%';
+            document.getElementById('valTemp').innerText = document.getElementById('temperature').value;
+            document.getElementById('valTint').innerText = document.getElementById('tint').value;
+            document.getElementById('valBrightness').innerText = document.getElementById('brightness').value;
+            document.getElementById('valContrast').innerText = document.getElementById('contrast').value;
+            document.getElementById('valRed').innerText = document.getElementById('redBoost').value + '%';
+            document.getElementById('valSaturation').innerText = document.getElementById('saturation').value;
+            document.getElementById('valSharpness').innerText = document.getElementById('sharpness').value + '%';
+            document.getElementById('valNoise').innerText = document.getElementById('noiseReduction').value + '%';
+            document.getElementById('valScratch').innerText = document.getElementById('scratchRepair').value + '%';
+            document.getElementById('valColorRestore').innerText = document.getElementById('colorRestore').value + '%';
+        }
+
+        function applyPreset(type) {
+            resetSliders(false);
+            if (type === 'correccionBasica') {
+                document.getElementById('yellowFix').value = 45;
+                document.getElementById('temperature').value = -8;
+                document.getElementById('tint').value = 0;
+                document.getElementById('brightness').value = 6;
+                document.getElementById('contrast').value = 12;
+                document.getElementById('redBoost').value = 0;
+                document.getElementById('saturation').value = 5;
+                document.getElementById('sharpness').value = 20;
+            } else if (type === 'limpiarAmarillo') {
+                document.getElementById('yellowFix').value = 60;
+                document.getElementById('temperature').value = -18;
+                document.getElementById('contrast').value = 12;
+            } else if (type === 'rostroNatural') {
+                document.getElementById('yellowFix').value = 30;
+                document.getElementById('temperature').value = -5;
+                document.getElementById('brightness').value = 4;
+                document.getElementById('contrast').value = 10;
+                document.getElementById('saturation').value = -5;
+            }
+            updateLabels();
+            schedulePreviewProcessing();
+        }
+
+        function resetSliders(render = true) {
+            inputs.forEach(id => {
+                document.getElementById(id).value = 0;
+            });
+            updateLabels();
+            if (render) schedulePreviewProcessing();
+        }
+
+        // v2.0 — preview-first editing + full-resolution export.
+        let imageWorker = null;
+        let workerJobId = 0;
+        let activePreviewJobId = 0;
+
+        function createImageWorker() {
+            if (!window.Worker) return null;
+            try {
+                const worker = new Worker('image-worker.js');
+                worker.onmessage = handleWorkerMessage;
+                worker.onerror = handleWorkerError;
+                return worker;
+            } catch (error) {
+                console.warn('Web Worker unavailable:', error);
+                return null;
+            }
+        }
+
+        imageWorker = createImageWorker();
+
+        function handleWorkerMessage(event) {
+            const msg = event.data;
+            const request = workerRequests.get(msg.jobId);
+            if (!request) return;
+            workerRequests.delete(msg.jobId);
+
+            if (msg.type === 'result') request.resolve(msg);
+            else request.reject(new Error(msg.message || 'Worker processing error'));
+        }
+
+        function handleWorkerError(error) {
+            console.error('Image Worker error:', error);
+            for (const [, request] of workerRequests) {
+                request.reject(new Error('Image Worker failed'));
+            }
+            workerRequests.clear();
+        }
+
+        function showProcessing(message = 'Procesando imagen…') {
+            const text = document.getElementById('processingText');
+            if (text) text.textContent = message;
+            processingIndicator.classList.remove('hidden');
+            processingIndicator.classList.add('flex');
+        }
+
+        function hideProcessing() {
+            processingIndicator.classList.add('hidden');
+            processingIndicator.classList.remove('flex');
+        }
+
+        function getFilterOptions() {
+            const contrastVal = parseFloat(document.getElementById('contrast').value);
+            return {
+                yellowFix: parseFloat(document.getElementById('yellowFix').value) / 100,
+                temp: parseFloat(document.getElementById('temperature').value),
+                tint: parseFloat(document.getElementById('tint').value),
+                brightness: parseFloat(document.getElementById('brightness').value) * 2.55,
+                contrastFactor: (259 * (contrastVal + 255)) / (255 * (259 - contrastVal)),
+                redBoost: parseFloat(document.getElementById('redBoost').value) / 100,
+                satVal: (parseFloat(document.getElementById('saturation').value) + 100) / 100,
+                sharpness: parseFloat(document.getElementById('sharpness').value),
+                noiseReduction: parseFloat(document.getElementById('noiseReduction').value) / 100,
+                scratchRepair: parseFloat(document.getElementById('scratchRepair').value) / 100,
+                colorRestore: parseFloat(document.getElementById('colorRestore').value) / 100
+            };
+        }
+
+        function schedulePreviewProcessing() {
+            if (!originalImg) return;
+            showProcessing('Actualizando previsualización…');
+            clearTimeout(processingTimer);
+            processingTimer = setTimeout(processPreview, 100);
+        }
+
+        async function processPreview() {
+            if (!originalImg) return;
+
+            const jobId = ++workerJobId;
+            activePreviewJobId = jobId;
+
+            // Start every preview operation from the clean preview.
+            ctxAfter.clearRect(0, 0, previewWidth, previewHeight);
+            ctxAfter.drawImage(originalImg, 0, 0, previewWidth, previewHeight);
+
+            const imgData = ctxAfter.getImageData(0, 0, previewWidth, previewHeight);
+            const options = getFilterOptions();
+
+            try {
+                const msg = await processWithWorkerOrFallback(
+                    imgData, previewWidth, previewHeight, options, jobId
+                );
+                if (jobId !== activePreviewJobId) return;
+
+                ctxAfter.putImageData(
+                    new ImageData(new Uint8ClampedArray(msg.buffer), msg.width, msg.height),
+                    0, 0
+                );
+                updateSplitView();
+            } catch (error) {
+                console.error(error);
+            } finally {
+                if (jobId === activePreviewJobId) hideProcessing();
+            }
+        }
+
+        function processWithWorkerOrFallback(imgData, width, height, options, jobId) {
+            if (!imageWorker) {
+                return Promise.resolve({
+                    type: 'result',
+                    jobId,
+                    width,
+                    height,
+                    buffer: processPixelsFallback(
+                        new Uint8ClampedArray(imgData.data), width, height, options
+                    ).buffer
+                });
+            }
+
+            return new Promise((resolve, reject) => {
+                workerRequests.set(jobId, { resolve, reject });
+                imageWorker.postMessage(
+                    {
+                        type: 'process',
+                        jobId,
+                        width,
+                        height,
+                        buffer: imgData.data.buffer,
+                        options
+                    },
+                    [imgData.data.buffer]
+                );
+            });
+        }
+
+        // v2.0 fallback mirrors the Worker algorithm.
+        function processPixelsFallback(data, width, height, options) {
+            const {
+                yellowFix, temp, tint, brightness, contrastFactor,
+                redBoost, satVal, sharpness, noiseReduction,
+                scratchRepair, colorRestore
+            } = options;
+
+            if (colorRestore > 0) applyGrayWorld(data, colorRestore);
+            if (noiseReduction > 0) data = boxBlurBlend(data, width, height, noiseReduction);
+
+            for (let i = 0; i < data.length; i += 4) {
+                let r = data[i], g = data[i + 1], b = data[i + 2];
+
+                if (yellowFix > 0) {
+                    const yellowTint = Math.min(r, g) - b;
+                    if (yellowTint > 0) {
+                        b += yellowTint * yellowFix * 0.85;
+                        g -= yellowTint * yellowFix * 0.2;
+                        r -= yellowTint * yellowFix * 0.1;
+                    }
+                }
+
+                r += temp * 0.8; b -= temp * 0.8; g -= tint * 0.8;
+                r += brightness; g += brightness; b += brightness;
+
+                r = contrastFactor * (r - 128) + 128;
+                g = contrastFactor * (g - 128) + 128;
+                b = contrastFactor * (b - 128) + 128;
+
+                if (redBoost > 0 && r > g * 1.2 && r > b * 1.2) {
+                    r += (r - Math.max(g, b)) * redBoost * 0.6;
+                }
+
+                const gray = 0.2989*r + 0.5870*g + 0.1140*b;
+                r = gray + satVal * (r - gray);
+                g = gray + satVal * (g - gray);
+                b = gray + satVal * (b - gray);
+
+                data[i] = clampPixel(r);
+                data[i+1] = clampPixel(g);
+                data[i+2] = clampPixel(b);
+            }
+
+            if (scratchRepair > 0) data = repairScratches(data, width, height, scratchRepair);
+            if (sharpness > 0) data = unsharpSafe(data, width, height, sharpness / 100);
+            return data;
+        }
+
+        function clampPixel(v) { return Math.max(0, Math.min(255, v)); }
+
+        function applyGrayWorld(data, strength) {
+            let sumR=0, sumG=0, sumB=0, count=0;
+            for (let i=0; i<data.length; i+=16) {
+                sumR+=data[i]; sumG+=data[i+1]; sumB+=data[i+2]; count++;
+            }
+            if (!count) return;
+            const avg=(sumR+sumG+sumB)/3;
+            const kr=avg/Math.max(1,sumR/count);
+            const kg=avg/Math.max(1,sumG/count);
+            const kb=avg/Math.max(1,sumB/count);
+            for (let i=0;i<data.length;i+=4) {
+                data[i]=clampPixel(data[i]*(1+(kr-1)*strength));
+                data[i+1]=clampPixel(data[i+1]*(1+(kg-1)*strength));
+                data[i+2]=clampPixel(data[i+2]*(1+(kb-1)*strength));
+            }
+        }
+
+        function boxBlurBlend(src,w,h,strength) {
+            const out=new Uint8ClampedArray(src);
+            for(let y=0;y<h;y++) for(let x=0;x<w;x++) {
+                const idx=(y*w+x)*4;
+                let sr=0,sg=0,sb=0,n=0;
+                for(let dy=-1;dy<=1;dy++) {
+                    const yy=y+dy; if(yy<0||yy>=h) continue;
+                    for(let dx=-1;dx<=1;dx++) {
+                        const xx=x+dx; if(xx<0||xx>=w) continue;
+                        const ni=(yy*w+xx)*4;
+                        sr+=src[ni]; sg+=src[ni+1]; sb+=src[ni+2]; n++;
+                    }
+                }
+                out[idx]=clampPixel(src[idx]*(1-strength)+(sr/n)*strength);
+                out[idx+1]=clampPixel(src[idx+1]*(1-strength)+(sg/n)*strength);
+                out[idx+2]=clampPixel(src[idx+2]*(1-strength)+(sb/n)*strength);
+            }
+            return out;
+        }
+
+        function repairScratches(src,w,h,strength) {
+            const out=new Uint8ClampedArray(src);
+            for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++) {
+                const idx=(y*w+x)*4;
+                const center=(src[idx]+src[idx+1]+src[idx+2])/3;
+                const li=idx-4, ri=idx+4, ui=idx-w*4, di=idx+w*4;
+                const left=(src[li]+src[li+1]+src[li+2])/3;
+                const right=(src[ri]+src[ri+1]+src[ri+2])/3;
+                const up=(src[ui]+src[ui+1]+src[ui+2])/3;
+                const down=(src[di]+src[di+1]+src[di+2])/3;
+                const neighborhood=(left+right+up+down)/4;
+                if(Math.abs(center-neighborhood)>70) {
+                    out[idx]=clampPixel(src[idx]*(1-strength)+neighborhood*strength);
+                    out[idx+1]=clampPixel(src[idx+1]*(1-strength)+neighborhood*strength);
+                    out[idx+2]=clampPixel(src[idx+2]*(1-strength)+neighborhood*strength);
+                }
+            }
+            return out;
+        }
+
+        function unsharpSafe(src,w,h,amount) {
+            const dst=new Uint8ClampedArray(src);
+            const weights=[0,-1,0,-1,5,-1,0,-1,0];
+            for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++) {
+                const idx=(y*w+x)*4;
+                for(let c=0;c<3;c++) {
+                    let v=0;
+                    v+=src[((y-1)*w+x-1)*4+c]*weights[0];
+                    v+=src[((y-1)*w+x)*4+c]*weights[1];
+                    v+=src[((y-1)*w+x+1)*4+c]*weights[2];
+                    v+=src[(y*w+x-1)*4+c]*weights[3];
+                    v+=src[idx+c]*weights[4];
+                    v+=src[(y*w+x+1)*4+c]*weights[5];
+                    v+=src[((y+1)*w+x-1)*4+c]*weights[6];
+                    v+=src[((y+1)*w+x)*4+c]*weights[7];
+                    v+=src[((y+1)*w+x+1)*4+c]*weights[8];
+                    dst[idx+c]=clampPixel(src[idx+c]+(v-src[idx+c])*amount);
+                }
+            }
+            return dst;
+        }
+
+        function getPreviewSize(width,height) {
+            const scale=Math.min(1,PREVIEW_MAX_DIMENSION/Math.max(width,height));
+            return {
+                width:Math.max(1,Math.round(width*scale)),
+                height:Math.max(1,Math.round(height*scale))
+            };
+        }
+
+        function preparePreview() {
+            const size=getPreviewSize(originalWidth,originalHeight);
+            previewWidth=size.width; previewHeight=size.height;
+            canvasBefore.width=previewWidth; canvasBefore.height=previewHeight;
+            canvasAfter.width=previewWidth; canvasAfter.height=previewHeight;
+            ctxBefore.drawImage(originalImg,0,0,previewWidth,previewHeight);
+            ctxAfter.drawImage(originalImg,0,0,previewWidth,previewHeight);
+
+            const info=document.getElementById('advancedStatus');
+            if(info) {
+                info.textContent=`${originalWidth}×${originalHeight} → ${previewWidth}×${previewHeight}`;
+                info.title='Resolución original → resolución de preview';
+            }
+        }
+
+        async function renderFullResolution() {
+            const fullCanvas=document.createElement('canvas');
+            fullCanvas.width=originalWidth; fullCanvas.height=originalHeight;
+            const fullCtx=fullCanvas.getContext('2d',{willReadFrequently:true});
+            fullCtx.drawImage(originalImg,0,0);
+
+            const imgData=fullCtx.getImageData(0,0,originalWidth,originalHeight);
+            const jobId=++workerJobId;
+            const msg=await processWithWorkerOrFallback(
+                imgData,originalWidth,originalHeight,getFilterOptions(),jobId
+            );
+
+            const output=document.createElement('canvas');
+            output.width=originalWidth; output.height=originalHeight;
+            output.getContext('2d').putImageData(
+                new ImageData(new Uint8ClampedArray(msg.buffer),msg.width,msg.height),0,0
+            );
+            return output;
+        }
+
+        async function downloadJpeg() {
+            if(!originalImg||exportInProgress)return;
+            exportInProgress=true; showProcessing('Preparando JPG a resolución completa…');
+            try {
+                const canvas=await renderFullResolution();
+                const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.95));
+                if(!blob)throw new Error('No se pudo generar el JPEG.');
+                downloadBlob(blob,'foto_restaurada_v2.0.jpg');
+            } catch(error) {
+                console.error(error);
+                alert('No se pudo exportar la imagen. Prueba con una resolución menor.');
+            } finally { exportInProgress=false; hideProcessing(); }
+        }
+
+        async function downloadPng() {
+            if(!originalImg||exportInProgress)return;
+            exportInProgress=true; showProcessing('Preparando PNG a resolución completa…');
+            try {
+                const canvas=await renderFullResolution();
+                const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));
+                if(!blob)throw new Error('No se pudo generar el PNG.');
+                downloadBlob(blob,'foto_restaurada_v2.0.png');
+            } catch(error) {
+                console.error(error);
+                alert('No se pudo exportar la imagen. Prueba con una resolución menor.');
+            } finally { exportInProgress=false; hideProcessing(); }
+        }
+
+        function downloadBlob(blob,filename) {
+            const link=document.createElement('a');
+            const url=URL.createObjectURL(blob);
+            link.href=url; link.download=filename;
+            document.body.appendChild(link); link.click(); link.remove();
+            setTimeout(()=>URL.revokeObjectURL(url),1000);
+        }
+
+        function updateSplitView() {
+            const rect = canvasBefore.getBoundingClientRect();
+            const clipWidth = rect.width * sliderPos;
+            
+            canvasAfter.style.clipPath = `polygon(0 0, ${clipWidth}px 0, ${clipWidth}px 100%, 0 100%)`;
+            divider.style.left = `${clipWidth}px`;
+            divider.setAttribute('aria-valuenow', Math.round(sliderPos * 100));
+        }
+
+        function downloadJpeg() {
+            if (!originalImg) return;
+
+            const link = document.createElement('a');
+            link.download = 'foto_navidena_restaurada.jpg';
+            link.href = canvasAfter.toDataURL('image/jpeg', 0.95);
+            link.click();
+        }
+
+        function downloadPng() {
+            if (!originalImg) return;
+
+            const link = document.createElement('a');
+            link.download = 'foto_navidena_restaurada.png';
+            link.href = canvasAfter.toDataURL('image/png');
+            link.click();
+        }
+        window.addEventListener('beforeunload', () => {
+            if (imageWorker) imageWorker.terminate();
+        });
+    </script>
+</body>
+</html>
