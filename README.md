@@ -1,6 +1,4 @@
-# 📸 Restaurador de Fotos — v2.1
-
-# 📷 Restaurador de Fotos
+📷 Restaurador de Fotos
 
 Herramienta web para restaurar y mejorar fotografías antiguas directamente desde el navegador.
 
